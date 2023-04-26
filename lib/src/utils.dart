@@ -43,7 +43,7 @@ StreamTransformer<ConnectivityResult, OfflineBuilderResult> startsWith(
         sync: true,
         onListen: () async {
           final hasConnection = await InternetConnectionChecker().hasConnection;
-          controller?.add(OfflineBuilderResult(data, hasConnection));
+          controller?.add(OfflineBuilderResult(data, hasConnection, AppLifecycleState.resumed == WidgetsBinding.instance.lifecycleState));
         },
         onPause: ([Future<dynamic>? resumeSignal]) =>
             subscription.pause(resumeSignal),
@@ -54,7 +54,7 @@ StreamTransformer<ConnectivityResult, OfflineBuilderResult> startsWith(
       subscription = input.listen(
         (x) async {
           final hasConnection = await InternetConnectionChecker().hasConnection;
-          controller?.add(OfflineBuilderResult(x, hasConnection));
+          controller?.add(OfflineBuilderResult(x, hasConnection, AppLifecycleState.resumed == WidgetsBinding.instance.lifecycleState));
         },
         onError: controller.addError,
         onDone: controller.close,
@@ -67,8 +67,10 @@ StreamTransformer<ConnectivityResult, OfflineBuilderResult> startsWith(
 }
 
 class OfflineBuilderResult {
-  OfflineBuilderResult(this.connectivityResult, this.hasConnection);
+  OfflineBuilderResult(
+      this.connectivityResult, this.hasConnection, this.appIsResumed);
 
   final ConnectivityResult connectivityResult;
   final bool hasConnection;
+  final bool appIsResumed;
 }
