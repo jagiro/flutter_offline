@@ -89,16 +89,13 @@ class OfflineBuilderState extends State<OfflineBuilder> {
   void initState() {
     super.initState();
 
-    final List<Stream<OfflineBuilderResult?>> groupStreams = [];
+    final List<Stream<OfflineBuilderResult>> groupStreams = [];
 
     if (widget.pingCheck != null) {
       final tempPeriodicStream = Stream.periodic(widget.pingCheck!, (_) async {
-
         final ConnectivityResult connectivity = await widget.connectivityService.checkConnectivity();
         final bool hasConnection = await InternetConnectionChecker().hasConnection;
-        final AppLifecycleState appState = WidgetsBinding.instance.lifecycleState;
-        developer.log('Check offline connectivity $hasConnection $appState');
-            
+        developer.log('Check offline connectivity $hasConnection ${AppLifecycleState.resumed == appState}');
         return OfflineBuilderResult(connectivity, hasConnection, AppLifecycleState.resumed == appState);
       }).asyncMap((event) => event);
 
