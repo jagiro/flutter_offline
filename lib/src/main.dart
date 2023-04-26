@@ -1,11 +1,11 @@
 import 'dart:async';
-
 import 'package:async/async.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_offline/src/utils.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:network_info_plus/network_info_plus.dart';
+import 'dart:developer' as developer;
 
 const kOfflineDebounceDuration = Duration(seconds: 3);
 
@@ -93,12 +93,17 @@ class OfflineBuilderState extends State<OfflineBuilder> {
 
     if (widget.pingCheck != null) {
       final tempPeriodicStream = Stream.periodic(widget.pingCheck!, (_) async {
-        final connectivity =
-            await widget.connectivityService.checkConnectivity();
-        final hasConnection = await InternetConnectionChecker().hasConnection;
-        return OfflineBuilderResult(connectivity, hasConnection);
+        if (AppLifecycleState.resumed ==
+            WidgetsBinding.instance.lifecycleState) {
+          ConnectivityResult connectivity =
+              await widget.connectivityService.checkConnectivity();
+          final bool hasConnection =
+              await InternetConnectionChecker().hasConnection;
+          developer.log('Check offline connectivity $hasConnection',
+              name: 'com.wesmartpark');
+        }
+        return null;
       }).asyncMap((event) => event);
-
       groupStreams.add(tempPeriodicStream);
     }
 

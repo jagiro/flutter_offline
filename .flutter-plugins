@@ -1,11 +1,3 @@
 # This is a generated file; do not edit or check into version control.
-connectivity_plus=/Users/jjchiw/development/flutter/.pub-cache/hosted/pub.dartlang.org/connectivity_plus-2.2.0/
-connectivity_plus_linux=/Users/jjchiw/development/flutter/.pub-cache/hosted/pub.dartlang.org/connectivity_plus_linux-1.2.0/
-connectivity_plus_macos=/Users/jjchiw/development/flutter/.pub-cache/hosted/pub.dartlang.org/connectivity_plus_macos-1.2.1/
-connectivity_plus_web=/Users/jjchiw/development/flutter/.pub-cache/hosted/pub.dartlang.org/connectivity_plus_web-1.2.0/
-connectivity_plus_windows=/Users/jjchiw/development/flutter/.pub-cache/hosted/pub.dartlang.org/connectivity_plus_windows-1.2.0/
-network_info_plus=/Users/jjchiw/development/flutter/.pub-cache/hosted/pub.dartlang.org/network_info_plus-2.1.2/
-network_info_plus_linux=/Users/jjchiw/development/flutter/.pub-cache/hosted/pub.dartlang.org/network_info_plus_linux-1.1.1/
-network_info_plus_macos=/Users/jjchiw/development/flutter/.pub-cache/hosted/pub.dartlang.org/network_info_plus_macos-1.3.0/
-network_info_plus_web=/Users/jjchiw/development/flutter/.pub-cache/hosted/pub.dartlang.org/network_info_plus_web-1.0.1/
-network_info_plus_windows=/Users/jjchiw/development/flutter/.pub-cache/hosted/pub.dartlang.org/network_info_plus_windows-1.0.2/
+connectivity_plus=/Users/jagiro/.pub-cache/hosted/pub.dev/connectivity_plus-3.0.3/
+network_info_plus=/Users/jagiro/.pub-cache/hosted/pub.dev/network_info_plus-3.0.2/
