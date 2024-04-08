@@ -99,6 +99,7 @@ class OfflineBuilderState extends State<OfflineBuilder> {
 
     developer.log(
         'Set InternetConnectionChecker addresses with ${widget.addresses}');
+    print('Set InternetConnectionChecker addresses with ${widget.addresses}');
 
     if (widget.addresses != null) {
       developer.log(
@@ -112,6 +113,10 @@ class OfflineBuilderState extends State<OfflineBuilder> {
             await widget.connectivityService.checkConnectivity();
         final bool hasConnection =
             await InternetConnectionChecker().hasConnection;
+        developer.log(
+            '>>Set InternetConnectionChecker addresses with ${widget.addresses}');
+        print(
+            '>>Set InternetConnectionChecker addresses with ${widget.addresses}');
         developer.log(
             'Check offline connectivity $hasConnection ${AppLifecycleState.resumed == WidgetsBinding.instance.lifecycleState}');
         return OfflineBuilderResult(
