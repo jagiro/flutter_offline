@@ -19,36 +19,40 @@ class OfflineBuilder extends StatefulWidget {
     Duration debounceDuration = kOfflineDebounceDuration,
     Widget? loadingWidget,
     WidgetBuilder? builder,
-    Widget? child,
     WidgetBuilder? errorBuilder,
     Duration? pingCheck,
+    List<AddressCheckOptions>? addresses,
+    Widget? child,
   }) {
     return OfflineBuilder.initialize(
-        key: key,
-        connectivityBuilder: connectivityBuilder,
-        connectivityService: Connectivity(),
-        wifiInfo: NetworkInfo(),
-        debounceDuration: debounceDuration,
-        builder: builder,
-        errorBuilder: errorBuilder,
-        child: child,
-        pingCheck: pingCheck,
-        loadingWidget: loadingWidget);
+      key: key,
+      connectivityBuilder: connectivityBuilder,
+      connectivityService: Connectivity(),
+      wifiInfo: NetworkInfo(),
+      debounceDuration: debounceDuration,
+      builder: builder,
+      errorBuilder: errorBuilder,
+      pingCheck: pingCheck,
+      loadingWidget: loadingWidget,
+      addresses: addresses,
+      child: child,
+    );
   }
 
   @visibleForTesting
-  const OfflineBuilder.initialize(
-      {Key? key,
-      required this.connectivityBuilder,
-      required this.connectivityService,
-      required this.wifiInfo,
-      this.debounceDuration = kOfflineDebounceDuration,
-      this.builder,
-      this.child,
-      this.errorBuilder,
-      this.pingCheck,
-      this.loadingWidget})
-      : assert(
+  const OfflineBuilder.initialize({
+    Key? key,
+    required this.connectivityBuilder,
+    required this.connectivityService,
+    required this.wifiInfo,
+    this.debounceDuration = kOfflineDebounceDuration,
+    this.builder,
+    this.errorBuilder,
+    this.pingCheck,
+    this.loadingWidget,
+    this.addresses,
+    this.child,
+  })  : assert(
             !(builder is WidgetBuilder && child is Widget) &&
                 !(builder == null && child == null),
             'You should specify either a builder or a child'),
@@ -78,6 +82,8 @@ class OfflineBuilder extends StatefulWidget {
 
   final Widget? loadingWidget;
 
+  final List<AddressCheckOptions>? addresses;
+
   @override
   OfflineBuilderState createState() => OfflineBuilderState();
 }
@@ -91,12 +97,23 @@ class OfflineBuilderState extends State<OfflineBuilder> {
 
     final List<Stream<OfflineBuilderResult>> groupStreams = [];
 
+    if (widget.addresses != null) {
+      InternetConnectionChecker().addresses = widget.addresses!;
+    }
+
     if (widget.pingCheck != null) {
       final tempPeriodicStream = Stream.periodic(widget.pingCheck!, (_) async {
-        final ConnectivityResult connectivity = await widget.connectivityService.checkConnectivity();
-        final bool hasConnection = await InternetConnectionChecker().hasConnection;
-        developer.log('Check offline connectivity $hasConnection ${AppLifecycleState.resumed == WidgetsBinding.instance.lifecycleState}');
-        return OfflineBuilderResult(connectivity, hasConnection, AppLifecycleState.resumed == WidgetsBinding.instance.lifecycleState);
+        final ConnectivityResult connectivity =
+            await widget.connectivityService.checkConnectivity();
+        final bool hasConnection =
+            await InternetConnectionChecker().hasConnection;
+        developer.log(
+            'Check offline connectivity $hasConnection ${AppLifecycleState.resumed == WidgetsBinding.instance.lifecycleState}');
+        return OfflineBuilderResult(
+            connectivity,
+            hasConnection,
+            AppLifecycleState.resumed ==
+                WidgetsBinding.instance.lifecycleState);
       }).asyncMap((event) => event);
 
       groupStreams.add(tempPeriodicStream);
