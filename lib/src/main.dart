@@ -97,13 +97,7 @@ class OfflineBuilderState extends State<OfflineBuilder> {
 
     final List<Stream<OfflineBuilderResult>> groupStreams = [];
 
-    developer.log(
-        'Set InternetConnectionChecker addresses with ${widget.addresses}');
-    print('Set InternetConnectionChecker addresses with ${widget.addresses}');
-
     if (widget.addresses != null) {
-      developer.log(
-          'Set InternetConnectionChecker addresses with ${widget.addresses}');
       InternetConnectionChecker().addresses = widget.addresses!;
     }
 
@@ -114,11 +108,7 @@ class OfflineBuilderState extends State<OfflineBuilder> {
         final bool hasConnection =
             await InternetConnectionChecker().hasConnection;
         developer.log(
-            '>>Set InternetConnectionChecker addresses with ${widget.addresses}');
-        print(
-            '>>Set InternetConnectionChecker addresses with ${widget.addresses}');
-        developer.log(
-            'Check offline connectivity $hasConnection ${AppLifecycleState.resumed == WidgetsBinding.instance.lifecycleState}');
+            'Check offline connectivity $hasConnection ${AppLifecycleState.resumed == WidgetsBinding.instance.lifecycleState} on addresses ${InternetConnectionChecker().addresses}');
         return OfflineBuilderResult(
             connectivity,
             hasConnection,
