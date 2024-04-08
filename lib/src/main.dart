@@ -21,7 +21,6 @@ class OfflineBuilder extends StatefulWidget {
     WidgetBuilder? builder,
     WidgetBuilder? errorBuilder,
     Duration? pingCheck,
-    List<AddressCheckOptions>? addresses,
     Widget? child,
   }) {
     return OfflineBuilder.initialize(
@@ -34,7 +33,6 @@ class OfflineBuilder extends StatefulWidget {
       errorBuilder: errorBuilder,
       pingCheck: pingCheck,
       loadingWidget: loadingWidget,
-      addresses: addresses,
       child: child,
     );
   }
@@ -50,7 +48,6 @@ class OfflineBuilder extends StatefulWidget {
     this.errorBuilder,
     this.pingCheck,
     this.loadingWidget,
-    this.addresses,
     this.child,
   })  : assert(
             !(builder is WidgetBuilder && child is Widget) &&
@@ -82,8 +79,6 @@ class OfflineBuilder extends StatefulWidget {
 
   final Widget? loadingWidget;
 
-  final List<AddressCheckOptions>? addresses;
-
   @override
   OfflineBuilderState createState() => OfflineBuilderState();
 }
@@ -96,10 +91,6 @@ class OfflineBuilderState extends State<OfflineBuilder> {
     super.initState();
 
     final List<Stream<OfflineBuilderResult>> groupStreams = [];
-
-    if (widget.addresses != null) {
-      InternetConnectionChecker().addresses = widget.addresses!;
-    }
 
     if (widget.pingCheck != null) {
       final tempPeriodicStream = Stream.periodic(widget.pingCheck!, (_) async {
