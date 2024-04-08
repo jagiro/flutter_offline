@@ -98,6 +98,8 @@ class OfflineBuilderState extends State<OfflineBuilder> {
     final List<Stream<OfflineBuilderResult>> groupStreams = [];
 
     if (widget.addresses != null) {
+      developer.log(
+          'Set InternetConnectionChecker addresses with ${widget.addresses}');
       InternetConnectionChecker().addresses = widget.addresses!;
     }
 
