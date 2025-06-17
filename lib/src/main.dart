@@ -3,7 +3,7 @@ import 'package:async/async.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_offline/src/utils.dart';
-import 'package:internet_connection_checker/internet_connection_checker.dart';
+import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 import 'package:network_info_plus/network_info_plus.dart';
 import 'dart:developer' as developer;
 
@@ -84,7 +84,7 @@ class OfflineBuilder extends StatefulWidget {
 }
 
 class OfflineBuilderState extends State<OfflineBuilder> {
-  late Stream<OfflineBuilderResult> _connectivityStream;
+  late Stream<OfflineBuilderResult> connectivityStream;
 
   @override
   void initState() {
@@ -94,12 +94,17 @@ class OfflineBuilderState extends State<OfflineBuilder> {
 
     if (widget.pingCheck != null) {
       final tempPeriodicStream = Stream.periodic(widget.pingCheck!, (_) async {
-        final ConnectivityResult connectivity =
+        final List<ConnectivityResult> results =
             await widget.connectivityService.checkConnectivity();
-        final bool hasConnection =
-            await InternetConnectionChecker().hasConnection;
+        final ConnectivityResult connectivity =
+            results.isNotEmpty ? results.first : ConnectivityResult.none;
+
+        final bool hasConnection = await InternetConnection().hasInternetAccess;
+
+        // Cambiado: InternetConnection en lugar de InternetConnectionChecker
         developer.log(
-            'Check offline connectivity $hasConnection ${AppLifecycleState.resumed == WidgetsBinding.instance.lifecycleState} on addresses ${InternetConnectionChecker().addresses}');
+            'Check offline connectivity $hasConnection ${AppLifecycleState.resumed == WidgetsBinding.instance.lifecycleState}');
+
         return OfflineBuilderResult(
             connectivity,
             hasConnection,
@@ -119,7 +124,7 @@ class OfflineBuilderState extends State<OfflineBuilder> {
 
     groupStreams.add(tempConnectivityStream);
 
-    _connectivityStream = StreamGroup.merge(groupStreams);
+    connectivityStream = StreamGroup.merge(groupStreams);
   }
 
   @override
@@ -130,7 +135,7 @@ class OfflineBuilderState extends State<OfflineBuilder> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<OfflineBuilderResult>(
-      stream: _connectivityStream,
+      stream: connectivityStream,
       builder:
           (BuildContext context, AsyncSnapshot<OfflineBuilderResult> snapshot) {
         if (!snapshot.hasData && !snapshot.hasError) {

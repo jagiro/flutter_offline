@@ -1,49 +1,59 @@
 import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:internet_connection_checker/internet_connection_checker.dart';
+import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 
 StreamTransformer<OfflineBuilderResult, OfflineBuilderResult> debounce(
   Duration debounceDuration,
 ) {
-  var _seenFirstData = false;
-  Timer? _debounceTimer;
+  var seenFirstData = false;
+  Timer? debounceTimer;
 
   return StreamTransformer<OfflineBuilderResult,
       OfflineBuilderResult>.fromHandlers(
     handleData:
         (OfflineBuilderResult data, EventSink<OfflineBuilderResult> sink) {
-      if (_seenFirstData) {
-        _debounceTimer?.cancel();
-        _debounceTimer = Timer(debounceDuration, () => sink.add(data));
+      if (seenFirstData) {
+        debounceTimer?.cancel();
+        debounceTimer = Timer(debounceDuration, () => sink.add(data));
       } else {
         sink.add(data);
-        _seenFirstData = true;
+        seenFirstData = true;
       }
     },
     handleDone: (EventSink<OfflineBuilderResult> sink) {
-      _debounceTimer?.cancel();
+      debounceTimer?.cancel();
       sink.close();
     },
   );
 }
 
-StreamTransformer<ConnectivityResult, OfflineBuilderResult> startsWith(
-  ConnectivityResult data,
+// CORREGIDO: Ahora maneja List<ConnectivityResult> en lugar de ConnectivityResult
+StreamTransformer<List<ConnectivityResult>, OfflineBuilderResult> startsWith(
+  List<ConnectivityResult> initialData,
 ) {
-  return StreamTransformer<ConnectivityResult, OfflineBuilderResult>(
+  return StreamTransformer<List<ConnectivityResult>, OfflineBuilderResult>(
     (
-      Stream<ConnectivityResult> input,
+      Stream<List<ConnectivityResult>> input,
       bool cancelOnError,
     ) {
       StreamController<OfflineBuilderResult>? controller;
-      late StreamSubscription<ConnectivityResult> subscription;
+      late StreamSubscription<List<ConnectivityResult>> subscription;
 
       controller = StreamController<OfflineBuilderResult>(
         sync: true,
         onListen: () async {
-          final hasConnection = await InternetConnectionChecker().hasConnection;
-          controller?.add(OfflineBuilderResult(data, hasConnection, AppLifecycleState.resumed == WidgetsBinding.instance.lifecycleState));
+          final hasConnection = await InternetConnection().hasInternetAccess;
+          // Usar el primer resultado de la lista como antes
+          final ConnectivityResult primaryResult = initialData.isNotEmpty
+              ? initialData.first
+              : ConnectivityResult.none;
+
+          controller?.add(OfflineBuilderResult(
+              primaryResult,
+              hasConnection,
+              AppLifecycleState.resumed ==
+                  WidgetsBinding.instance.lifecycleState));
         },
         onPause: ([Future<dynamic>? resumeSignal]) =>
             subscription.pause(resumeSignal),
@@ -52,9 +62,17 @@ StreamTransformer<ConnectivityResult, OfflineBuilderResult> startsWith(
       );
 
       subscription = input.listen(
-        (x) async {
-          final hasConnection = await InternetConnectionChecker().hasConnection;
-          controller?.add(OfflineBuilderResult(x, hasConnection, AppLifecycleState.resumed == WidgetsBinding.instance.lifecycleState));
+        (List<ConnectivityResult> results) async {
+          final hasConnection = await InternetConnection().hasInternetAccess;
+          // Usar el primer resultado de la lista
+          final ConnectivityResult primaryResult =
+              results.isNotEmpty ? results.first : ConnectivityResult.none;
+
+          controller?.add(OfflineBuilderResult(
+              primaryResult,
+              hasConnection,
+              AppLifecycleState.resumed ==
+                  WidgetsBinding.instance.lifecycleState));
         },
         onError: controller.addError,
         onDone: controller.close,
