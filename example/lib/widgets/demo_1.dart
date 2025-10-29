@@ -56,9 +56,9 @@ class Demo1 extends StatelessWidget {
           ],
         );
       },
-      child: Column(
+      child: const Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: const <Widget>[
+        children: <Widget>[
           Text(
             'There are no bottons to push :)',
           ),
