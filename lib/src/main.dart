@@ -142,6 +142,7 @@ class OfflineBuilderState extends State<OfflineBuilder> {
           '[OFFLINE_LIB] Using initialState=${widget.initialState}, skipping initial check');
       final tempConnectivityStream = widget
           .connectivityService.onConnectivityChanged
+          .skip(1) // Skip first event: initialState already covers it, avoids redundant HTTP check during startup congestion
           .asyncMap((List<ConnectivityResult> results) async {
         debugPrint(
             '[OFFLINE_LIB] onConnectivityChanged: $results, checking internet...');
