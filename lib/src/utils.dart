@@ -14,9 +14,17 @@ StreamTransformer<OfflineBuilderResult, OfflineBuilderResult> debounce(
     handleData:
         (OfflineBuilderResult data, EventSink<OfflineBuilderResult> sink) {
       if (seenFirstData) {
+        debugPrint(
+            '[OFFLINE_LIB] DEBOUNCE: waiting ${debounceDuration.inMilliseconds}ms before emitting hasConn=${data.hasConnection}, conn=${data.connectivityResult.name}');
         debounceTimer?.cancel();
-        debounceTimer = Timer(debounceDuration, () => sink.add(data));
+        debounceTimer = Timer(debounceDuration, () {
+          debugPrint(
+              '[OFFLINE_LIB] DEBOUNCE: EMITTING hasConn=${data.hasConnection}, conn=${data.connectivityResult.name}');
+          sink.add(data);
+        });
       } else {
+        debugPrint(
+            '[OFFLINE_LIB] DEBOUNCE: first data, emitting immediately hasConn=${data.hasConnection}, conn=${data.connectivityResult.name}');
         sink.add(data);
         seenFirstData = true;
       }
@@ -28,9 +36,9 @@ StreamTransformer<OfflineBuilderResult, OfflineBuilderResult> debounce(
   );
 }
 
-// CORREGIDO: Ahora maneja List<ConnectivityResult> en lugar de ConnectivityResult
 StreamTransformer<List<ConnectivityResult>, OfflineBuilderResult> startsWith(
   List<ConnectivityResult> initialData,
+  InternetConnection internetConnection,
 ) {
   return StreamTransformer<List<ConnectivityResult>, OfflineBuilderResult>(
     (
@@ -43,17 +51,23 @@ StreamTransformer<List<ConnectivityResult>, OfflineBuilderResult> startsWith(
       controller = StreamController<OfflineBuilderResult>(
         sync: true,
         onListen: () async {
-          final hasConnection = await InternetConnection().hasInternetAccess;
-          // Usar el primer resultado de la lista como antes
+          debugPrint(
+              '[OFFLINE_LIB] STARTS_WITH onListen: checking internet...');
+          final hasConnection =
+              await internetConnection.hasInternetAccess;
           final ConnectivityResult primaryResult = initialData.isNotEmpty
               ? initialData.first
               : ConnectivityResult.none;
 
-          controller?.add(OfflineBuilderResult(
-              primaryResult,
-              hasConnection,
-              AppLifecycleState.resumed ==
-                  WidgetsBinding.instance.lifecycleState));
+          debugPrint(
+              '[OFFLINE_LIB] STARTS_WITH onListen: hasConn=$hasConnection, conn=$primaryResult');
+          if (controller case final c? when !c.isClosed) {
+            c.add(OfflineBuilderResult(
+                primaryResult,
+                hasConnection,
+                AppLifecycleState.resumed ==
+                    WidgetsBinding.instance.lifecycleState));
+          }
         },
         onPause: ([Future<dynamic>? resumeSignal]) =>
             subscription.pause(resumeSignal),
@@ -63,16 +77,22 @@ StreamTransformer<List<ConnectivityResult>, OfflineBuilderResult> startsWith(
 
       subscription = input.listen(
         (List<ConnectivityResult> results) async {
-          final hasConnection = await InternetConnection().hasInternetAccess;
-          // Usar el primer resultado de la lista
+          debugPrint(
+              '[OFFLINE_LIB] STARTS_WITH onConnectivityChanged: $results, checking internet...');
+          final hasConnection =
+              await internetConnection.hasInternetAccess;
           final ConnectivityResult primaryResult =
               results.isNotEmpty ? results.first : ConnectivityResult.none;
 
-          controller?.add(OfflineBuilderResult(
-              primaryResult,
-              hasConnection,
-              AppLifecycleState.resumed ==
-                  WidgetsBinding.instance.lifecycleState));
+          debugPrint(
+              '[OFFLINE_LIB] STARTS_WITH onConnectivityChanged: hasConn=$hasConnection, conn=$primaryResult');
+          if (controller case final c? when !c.isClosed) {
+            c.add(OfflineBuilderResult(
+                primaryResult,
+                hasConnection,
+                AppLifecycleState.resumed ==
+                    WidgetsBinding.instance.lifecycleState));
+          }
         },
         onError: controller.addError,
         onDone: controller.close,

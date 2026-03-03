@@ -5,7 +5,6 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_offline/src/utils.dart';
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 import 'package:network_info_plus/network_info_plus.dart';
-import 'dart:developer' as developer;
 
 const kOfflineDebounceDuration = Duration(seconds: 3);
 
@@ -22,6 +21,8 @@ class OfflineBuilder extends StatefulWidget {
     WidgetBuilder? errorBuilder,
     Duration? pingCheck,
     Widget? child,
+    InternetConnection? internetConnection,
+    bool? initialState,
   }) {
     return OfflineBuilder.initialize(
       key: key,
@@ -33,6 +34,8 @@ class OfflineBuilder extends StatefulWidget {
       errorBuilder: errorBuilder,
       pingCheck: pingCheck,
       loadingWidget: loadingWidget,
+      internetConnection: internetConnection,
+      initialState: initialState,
       child: child,
     );
   }
@@ -49,6 +52,8 @@ class OfflineBuilder extends StatefulWidget {
     this.pingCheck,
     this.loadingWidget,
     this.child,
+    this.internetConnection,
+    this.initialState,
   })  : assert(
             !(builder is WidgetBuilder && child is Widget) &&
                 !(builder == null && child == null),
@@ -79,6 +84,16 @@ class OfflineBuilder extends StatefulWidget {
 
   final Widget? loadingWidget;
 
+  /// Optional [InternetConnection] instance to use for connectivity checks.
+  /// If not provided, uses the default [InternetConnection()] factory.
+  final InternetConnection? internetConnection;
+
+  /// Optional initial connectivity state (true = online, false = offline).
+  /// When provided, the builder renders immediately with this value and
+  /// skips the initial connectivity check. First real check happens at the
+  /// next periodic interval or connectivity change event.
+  final bool? initialState;
+
   @override
   OfflineBuilderState createState() => OfflineBuilderState();
 }
@@ -86,24 +101,29 @@ class OfflineBuilder extends StatefulWidget {
 class OfflineBuilderState extends State<OfflineBuilder> {
   late Stream<OfflineBuilderResult> connectivityStream;
 
+  InternetConnection get _internetConnection =>
+      widget.internetConnection ?? InternetConnection();
+
   @override
   void initState() {
     super.initState();
 
     final List<Stream<OfflineBuilderResult>> groupStreams = [];
 
+    // Periodic stream: fires every pingCheck duration
     if (widget.pingCheck != null) {
-      final tempPeriodicStream = Stream.periodic(widget.pingCheck!, (_) async {
+      final tempPeriodicStream =
+          Stream.periodic(widget.pingCheck!, (_) async {
         final List<ConnectivityResult> results =
             await widget.connectivityService.checkConnectivity();
         final ConnectivityResult connectivity =
             results.isNotEmpty ? results.first : ConnectivityResult.none;
 
-        final bool hasConnection = await InternetConnection().hasInternetAccess;
+        final bool hasConnection =
+            await _internetConnection.hasInternetAccess;
 
-        // Cambiado: InternetConnection en lugar de InternetConnectionChecker
-        developer.log(
-            'Check offline connectivity $hasConnection ${AppLifecycleState.resumed == WidgetsBinding.instance.lifecycleState}');
+        debugPrint(
+            '[OFFLINE_LIB] PERIODIC check: hasConn=$hasConnection, conn=$connectivity, appResumed=${AppLifecycleState.resumed == WidgetsBinding.instance.lifecycleState}');
 
         return OfflineBuilderResult(
             connectivity,
@@ -115,16 +135,45 @@ class OfflineBuilderState extends State<OfflineBuilder> {
       groupStreams.add(tempPeriodicStream);
     }
 
-    final tempConnectivityStream =
-        Stream.fromFuture(widget.connectivityService.checkConnectivity())
-            .asyncExpand((data) => widget
-                .connectivityService.onConnectivityChanged
-                .transform(startsWith(data)))
-            .transform(debounce(widget.debounceDuration));
+    // Connectivity change stream
+    if (widget.initialState != null) {
+      // Initial state provided: skip the initial check, only react to changes
+      debugPrint(
+          '[OFFLINE_LIB] Using initialState=${widget.initialState}, skipping initial check');
+      final tempConnectivityStream = widget
+          .connectivityService.onConnectivityChanged
+          .asyncMap((List<ConnectivityResult> results) async {
+        debugPrint(
+            '[OFFLINE_LIB] onConnectivityChanged: $results, checking internet...');
+        final hasConnection =
+            await _internetConnection.hasInternetAccess;
+        final ConnectivityResult primaryResult =
+            results.isNotEmpty ? results.first : ConnectivityResult.none;
+        debugPrint(
+            '[OFFLINE_LIB] onConnectivityChanged result: hasConn=$hasConnection, conn=$primaryResult');
+        return OfflineBuilderResult(
+            primaryResult,
+            hasConnection,
+            AppLifecycleState.resumed ==
+                WidgetsBinding.instance.lifecycleState);
+      });
+      groupStreams.add(tempConnectivityStream);
+    } else {
+      // No initial state: do the initial check (original behavior)
+      final tempConnectivityStream =
+          Stream.fromFuture(widget.connectivityService.checkConnectivity())
+              .asyncExpand((data) {
+        debugPrint(
+            '[OFFLINE_LIB] CONNECTIVITY stream started, initial: $data');
+        return widget.connectivityService.onConnectivityChanged
+            .transform(startsWith(data, _internetConnection));
+      });
+      groupStreams.add(tempConnectivityStream);
+    }
 
-    groupStreams.add(tempConnectivityStream);
-
-    connectivityStream = StreamGroup.merge(groupStreams);
+    // Debounce applied to the MERGED stream (covers both periodic and connectivity)
+    connectivityStream = StreamGroup.merge(groupStreams)
+        .transform(debounce(widget.debounceDuration));
   }
 
   @override
@@ -134,10 +183,20 @@ class OfflineBuilderState extends State<OfflineBuilder> {
 
   @override
   Widget build(BuildContext context) {
+    // When initialState is provided, render immediately without waiting for stream
+    final initialData = widget.initialState != null
+        ? OfflineBuilderResult(
+            ConnectivityResult.other,
+            widget.initialState!,
+            true,
+          )
+        : null;
+
     return StreamBuilder<OfflineBuilderResult>(
       stream: connectivityStream,
-      builder:
-          (BuildContext context, AsyncSnapshot<OfflineBuilderResult> snapshot) {
+      initialData: initialData,
+      builder: (BuildContext context,
+          AsyncSnapshot<OfflineBuilderResult> snapshot) {
         if (!snapshot.hasData && !snapshot.hasError) {
           return widget.loadingWidget ?? const SizedBox();
         }
